@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scalable-ai-production-infrastructure"
+version = "1.0.0"
+description = "Enterprise Scalable AI Production Infrastructure with Docker, DevOps, SQL/NoSQL DBaaS, and Kubernetes"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Scalable AI Platform Team" }
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "dist",
+    "build",
+    "services/*/alembic",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "B008", # do not perform function calls in argument defaults (FastAPI Depends)
+    "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "services/api-service/tests",
+    "services/auth-service/tests",
+    "services/inference-service/tests",
+    "services/worker-service/tests",
+]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["services", "shared"]
+omit = [
+    "*/tests/*",
+    "*/alembic/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+
+[tool.bandit]
+exclude_dirs = ["tests", "services/*/tests"]
+skips = ["B101", "B104"] # B101: assert used in tests, B104: bind all interfaces (0.0.0.0 in Docker)

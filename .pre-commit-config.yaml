@@ -1,0 +1,57 @@
+# ============================================================
+# Pre-Commit Configuration — Scalable AI Production Infrastructure
+# ============================================================
+# Enforces enterprise code quality, linting, security scanning,
+# and formatting standards across all Python microservices.
+#
+# Install:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run manually:
+#   pre-commit run --all-files
+# ============================================================
+
+default_language_version:
+  python: python3
+
+repos:
+  # --- Standard File Integrity Checks ---
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--unsafe]
+        exclude: ^k8s/helm/
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # --- High-Performance Python Linter & Formatter (Ruff) ---
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # --- Security Vulnerability Scanner (Bandit) ---
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+        exclude: ^(tests/|services/.*/tests/)
+
+  # --- Shell Script Linter (ShellCheck) ---
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0
+    hooks:
+      - id: shellcheck
+        args: [-e, SC1091]
