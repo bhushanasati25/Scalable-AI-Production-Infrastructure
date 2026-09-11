@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from celery import Celery, Task
 from celery.signals import worker_init, worker_shutdown
@@ -168,11 +168,11 @@ def process_data_pipeline(self, pipeline_id: str, config: dict):
         "pipeline_id": pipeline_id,
         "status": "completed",
         "records_processed": 1000,
-        "completed_at": datetime.utcnow().isoformat(),
+        "completed_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
 @celery_app.task(name="app.worker.tasks.health_check")
 def health_check():
     """Simple task for health checking the worker."""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
