@@ -21,6 +21,7 @@ jobs:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         service: [api-service, auth-service, worker-service, inference-service]
     steps:
