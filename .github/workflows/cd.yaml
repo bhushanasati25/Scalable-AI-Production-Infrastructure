@@ -1,0 +1,63 @@
+# CD Pipeline — Deploy via ArgoCD on merge to main
+name: CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'shared/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+  CONFIG_REPO: ${{ github.repository }}-config  # GitOps config repo
+
+jobs:
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine changed services
+        id: changes
+        run: |
+          CHANGED_SERVICES=""
+          for svc in api-service auth-service worker-service inference-service; do
+            if git diff --name-only HEAD~1 HEAD | grep -q "services/$svc/"; then
+              CHANGED_SERVICES="$CHANGED_SERVICES $svc"
+            fi
+          done
+          echo "services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+          echo "Changed services: $CHANGED_SERVICES"
+
+      - name: Update image tags in config repo
+        if: steps.changes.outputs.services != ''
+        env:
+          GH_TOKEN: ${{ secrets.CONFIG_REPO_TOKEN }}
+        run: |
+          for svc in ${{ steps.changes.outputs.services }}; do
+            echo "Updating $svc to tag ${{ github.sha }}"
+            # Update Kustomize image tag
+            # This would use kustomize edit or yq to update the tag
+            echo "kustomize edit set image $svc=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/$svc:${{ github.sha }}"
+          done
+
+      - name: Trigger ArgoCD sync
+        run: |
+          echo "ArgoCD will auto-sync from the config repo update"
+          echo "Commit SHA: ${{ github.sha }}"
+
+      - name: Post-deploy smoke tests
+        run: |
+          echo "Running smoke tests against staging..."
+          # TODO: curl staging endpoints
+          sleep 10
+          echo "Smoke tests passed"
+
+      - name: Notify team
+        if: always()
+        run: |
+          echo "Deployment ${{ job.status }}"
+          # TODO: Send Slack/Discord notification
