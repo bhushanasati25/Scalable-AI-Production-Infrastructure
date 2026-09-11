@@ -5,9 +5,10 @@ GPU/CPU-aware model loading with batch inference support.
 
 from __future__ import annotations
 
+import sys
 import time
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -15,20 +16,18 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-import sys
-
 sys.path.insert(0, "/app")
-from shared.common.schemas import (
-    HealthResponse,
-    ServiceName,
-    ErrorResponse,
-    APIResponse,
-    InferenceRequest,
-    InferenceResponse,
-    TaskStatus,
-)
 from shared.common.exceptions import BaseServiceError, InferenceError
 from shared.common.logging import configure_logging, get_logger
+from shared.common.schemas import (
+    APIResponse,
+    ErrorResponse,
+    HealthResponse,
+    InferenceRequest,
+    InferenceResponse,
+    ServiceName,
+    TaskStatus,
+)
 
 
 # ── Settings ──
@@ -196,7 +195,7 @@ async def predict(request: InferenceRequest) -> APIResponse[InferenceResponse]:
         raise
     except Exception as exc:
         logger.error("Inference failed", request_id=request_id, error=str(exc))
-        raise InferenceError(str(exc), model=request.model_name)
+        raise InferenceError(str(exc), model=request.model_name) from exc
 
 
 class BatchRequest(BaseModel):

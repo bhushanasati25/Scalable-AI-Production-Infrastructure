@@ -5,14 +5,13 @@ Handles background processing, inference dispatching, and data pipeline tasks.
 
 from __future__ import annotations
 
+import sys
 import time
 from datetime import datetime
 
 from celery import Celery, Task
 from celery.signals import worker_init, worker_shutdown
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-import sys
 
 sys.path.insert(0, "/app")
 from shared.common.logging import configure_logging, get_logger

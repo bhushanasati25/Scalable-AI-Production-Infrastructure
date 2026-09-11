@@ -42,13 +42,11 @@ jobs:
 
       - name: Ruff lint
         run: |
-          cd services/${{ matrix.service }}
-          ruff check .
+          ruff check services/${{ matrix.service }}
 
       - name: Ruff format check
         run: |
-          cd services/${{ matrix.service }}
-          ruff format --check .
+          ruff format --check services/${{ matrix.service }}
 
       - name: Mypy type check
         run: |
@@ -119,7 +117,7 @@ jobs:
       - name: Run tests
         run: |
           cd services/${{ matrix.service }}
-          pytest -v --tb=short --junitxml=reports/junit.xml --cov=app --cov-report=xml:reports/coverage.xml
+          python -m pytest -v --tb=short --junitxml=reports/junit.xml --cov=app --cov-report=xml:reports/coverage.xml
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

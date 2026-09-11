@@ -4,13 +4,14 @@ Auth Service — JWT Authentication & Authorization Microservice
 
 from __future__ import annotations
 
+import sys
 import time
 import uuid
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
-from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 
-from fastapi import FastAPI, Depends, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,24 +21,22 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-import sys
-
 sys.path.insert(0, "/app")
+from shared.common.exceptions import (
+    BaseServiceError,
+    ConflictError,
+    UnauthorizedError,
+)
+from shared.common.logging import configure_logging, get_logger
 from shared.common.schemas import (
+    APIResponse,
+    ErrorResponse,
     HealthResponse,
     ServiceName,
-    ErrorResponse,
     TokenResponse,
     UserCreate,
     UserResponse,
-    APIResponse,
 )
-from shared.common.exceptions import (
-    BaseServiceError,
-    UnauthorizedError,
-    ConflictError,
-)
-from shared.common.logging import configure_logging, get_logger
 
 
 # ── Settings ──
@@ -79,7 +78,7 @@ def create_token(user_id: str, role: str, expires_delta: timedelta) -> str:
     """Create a JWT token."""
     import jwt as pyjwt
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     payload = {
         "sub": user_id,
         "role": role,
@@ -102,9 +101,9 @@ def verify_token(token: str) -> dict:
         )
         return payload
     except pyjwt.ExpiredSignatureError:
-        raise UnauthorizedError("Token has expired")
+        raise UnauthorizedError("Token has expired") from None
     except pyjwt.InvalidTokenError:
-        raise UnauthorizedError("Invalid token")
+        raise UnauthorizedError("Invalid token") from None
 
 
 # ── Lifespan ──
@@ -126,7 +125,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 from sqlalchemy import text
 
                 await conn.execute(text("SELECT 1"))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Database not available on startup", error=str(e))
     logger.info("Auth Service started")
 
