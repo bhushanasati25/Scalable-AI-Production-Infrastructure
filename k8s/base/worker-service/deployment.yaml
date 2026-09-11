@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-service
+  labels:
+    app: worker-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: worker-service
+  template:
+    metadata:
+      labels:
+        app: worker-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: worker
+          image: ghcr.io/scalable-ai/worker-service:latest
+          env:
+            - name: ENVIRONMENT
+              value: production
+            - name: CELERY_BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: redis-broker-url
+            - name: CELERY_RESULT_BACKEND
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: redis-result-url
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: postgres-url
+            - name: MONGO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: mongo-url
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          livenessProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - app.worker
+                - inspect
+                - ping
+                - --timeout
+                - "10"
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 15

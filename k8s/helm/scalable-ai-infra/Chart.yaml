@@ -1,0 +1,16 @@
+apiVersion: v2
+name: scalable-ai-infra
+description: Scalable AI Production Infrastructure Helm Chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+keywords:
+  - microservices
+  - ai-inference
+  - fastapi
+  - kubernetes
+
+maintainers:
+  - name: Platform Team
+    email: platform@example.com

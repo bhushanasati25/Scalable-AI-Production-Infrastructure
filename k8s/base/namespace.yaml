@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scalable-ai
+  labels:
+    app.kubernetes.io/part-of: scalable-ai-infra
+    env: production

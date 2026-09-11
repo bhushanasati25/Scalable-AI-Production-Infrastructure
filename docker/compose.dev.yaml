@@ -1,0 +1,85 @@
+# ============================================================
+# Docker Compose — Development Overrides
+# Usage: docker compose -f docker/compose.yaml -f docker/compose.dev.yaml up
+# ============================================================
+
+services:
+  api-service:
+    build:
+      target: development
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - API_RELOAD=true
+    volumes:
+      - ../services/api-service/app:/app/app:ro
+      - ../shared:/app/shared:ro
+    ports:
+      - "${API_PORT:-8000}:${API_PORT:-8000}"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+
+  auth-service:
+    build:
+      target: development
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ../services/auth-service/app:/app/app:ro
+      - ../shared:/app/shared:ro
+    ports:
+      - "${AUTH_PORT:-8001}:${AUTH_PORT:-8001}"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  worker-service:
+    build:
+      target: development
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - CELERY_CONCURRENCY=2
+    volumes:
+      - ../services/worker-service/app:/app/app:ro
+      - ../shared:/app/shared:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+
+  inference-service:
+    build:
+      target: development
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ../services/inference-service/app:/app/app:ro
+      - ../shared:/app/shared:ro
+    ports:
+      - "${INFERENCE_PORT:-8002}:${INFERENCE_PORT:-8002}"
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  mongo:
+    ports:
+      - "27017:27017"
+
+  redis:
+    ports:
+      - "6379:6379"

@@ -1,0 +1,58 @@
+# ArgoCD ApplicationSet — Multi-Environment (dev/staging/production)
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: scalable-ai-multi-env
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          # Environments
+          - list:
+              elements:
+                - env: dev
+                  cluster: https://kubernetes.default.svc
+                  namespace: scalable-ai-dev
+                  autoSync: true
+                - env: staging
+                  cluster: https://kubernetes.default.svc
+                  namespace: scalable-ai-staging
+                  autoSync: true
+                - env: production
+                  cluster: https://kubernetes.default.svc
+                  namespace: scalable-ai-prod
+                  autoSync: false  # Manual sync for production
+          # Services
+          - list:
+              elements:
+                - service: api-service
+                  syncWave: "2"
+                - service: auth-service
+                  syncWave: "1"
+                - service: worker-service
+                  syncWave: "3"
+                - service: inference-service
+                  syncWave: "3"
+  template:
+    metadata:
+      name: "{{.service}}-{{.env}}"
+      annotations:
+        argocd.argoproj.io/sync-wave: "{{.syncWave}}"
+    spec:
+      project: scalable-ai
+      source:
+        repoURL: https://github.com/your-org/scalable-ai-infra-config.git
+        targetRevision: HEAD
+        path: "k8s/overlays/{{.env}}"
+      destination:
+        server: "{{.cluster}}"
+        namespace: "{{.namespace}}"
+      syncPolicy:
+        automated:
+          prune: "{{.autoSync}}"
+          selfHeal: "{{.autoSync}}"
+        syncOptions:
+          - CreateNamespace=true

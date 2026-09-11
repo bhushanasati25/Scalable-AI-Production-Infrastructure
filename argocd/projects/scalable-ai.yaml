@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: scalable-ai
+  namespace: argocd
+spec:
+  description: Scalable AI Production Infrastructure
+  sourceRepos:
+    - 'https://github.com/your-org/scalable-ai-infra-config.git'
+    - 'https://github.com/your-org/scalable-ai-infra.git'
+  destinations:
+    - namespace: 'scalable-ai-*'
+      server: https://kubernetes.default.svc
+    - namespace: scalable-ai
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: '*'
+    - group: apps
+      kind: '*'
+    - group: autoscaling
+      kind: '*'
+    - group: policy
+      kind: '*'
+    - group: networking.k8s.io
+      kind: '*'
+  roles:
+    - name: admin
+      description: Full access to all resources
+      policies:
+        - p, proj:scalable-ai:admin, applications, *, scalable-ai/*, allow
+      groups:
+        - platform-team
+    - name: developer
+      description: Read-only access with sync for dev/staging
+      policies:
+        - p, proj:scalable-ai:developer, applications, get, scalable-ai/*, allow
+        - p, proj:scalable-ai:developer, applications, sync, scalable-ai/*-dev, allow
+        - p, proj:scalable-ai:developer, applications, sync, scalable-ai/*-staging, allow
+      groups:
+        - developers

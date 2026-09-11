@@ -1,0 +1,15 @@
+# Example Terraform variables for Production DBaaS
+aws_region             = "us-east-1"
+vpc_id                 = "vpc-0a1b2c3d4e5f67890"
+private_subnet_ids     = ["subnet-01111111", "subnet-02222222", "subnet-03333333"]
+eks_security_group_ids = ["sg-0abcdef1234567890"]
+postgres_password      = "StrongPostgresDBaaSPassword#2026"
+
+atlas_project_id        = "65f01234567890abcdef1234"
+mongodbatlas_public_key = "abcdefgh"
+mongodbatlas_private_key= "11111111-2222-3333-4444-555555555555"
+mongo_password          = "StrongMongoAtlasPassword#2026"
+nat_gateway_ips         = ["54.123.45.67/32"]
+
+redis_endpoint = "sai-redis-prod.cache.amazonaws.com"
+redis_password = "StrongRedisClusterPassword#2026"

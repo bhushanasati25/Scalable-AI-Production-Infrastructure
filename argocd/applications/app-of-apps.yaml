@@ -1,0 +1,32 @@
+# ArgoCD App-of-Apps — Manages all microservices
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: scalable-ai-infra
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: scalable-ai
+  source:
+    repoURL: https://github.com/your-org/scalable-ai-infra-config.git
+    targetRevision: HEAD
+    path: argocd/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

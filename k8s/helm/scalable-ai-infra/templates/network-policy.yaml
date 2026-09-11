@@ -1,0 +1,67 @@
+{{- if .Values.networkPolicies.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "scalable-ai.fullname" . }}-default-deny
+  labels:
+    {{- include "scalable-ai.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    # Allow DNS resolution
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "scalable-ai.fullname" . }}-api-ingress
+  labels:
+    {{- include "scalable-ai.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Values.apiService.name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - port: {{ .Values.apiService.port }}
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.authService.name }}
+      ports:
+        - port: {{ .Values.authService.port }}
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Values.inferenceService.name }}
+      ports:
+        - port: {{ .Values.inferenceService.port }}
+          protocol: TCP
+    # Allow external DB/redis egress
+    - ports:
+        - port: 5432
+          protocol: TCP
+        - port: 27017
+          protocol: TCP
+        - port: 6379
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+{{- end }}

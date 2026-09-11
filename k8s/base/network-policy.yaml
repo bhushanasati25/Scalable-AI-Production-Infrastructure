@@ -1,0 +1,159 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: scalable-ai
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    # Allow DNS within cluster
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-service-netpol
+  namespace: scalable-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: api-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Ingress from Ingress controller / Gateway
+    - ports:
+        - port: 8000
+          protocol: TCP
+  egress:
+    # Intra-cluster to Auth and Inference
+    - to:
+        - podSelector:
+            matchLabels:
+              app: auth-service
+      ports:
+        - port: 8001
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              app: inference-service
+      ports:
+        - port: 8002
+          protocol: TCP
+    # Egress to DBaaS / DBs
+    - ports:
+        - port: 5432
+          protocol: TCP
+        - port: 27017
+          protocol: TCP
+        - port: 6379
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: auth-service-netpol
+  namespace: scalable-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: auth-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from API service and Gateway
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-service
+      ports:
+        - port: 8001
+          protocol: TCP
+  egress:
+    # Egress to PostgreSQL & Redis
+    - ports:
+        - port: 5432
+          protocol: TCP
+        - port: 6379
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: inference-service-netpol
+  namespace: scalable-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: inference-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-service
+        - podSelector:
+            matchLabels:
+              app: worker-service
+      ports:
+        - port: 8002
+          protocol: TCP
+  egress:
+    - ports:
+        - port: 6379
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: worker-service-netpol
+  namespace: scalable-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: worker-service
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: inference-service
+      ports:
+        - port: 8002
+          protocol: TCP
+    - ports:
+        - port: 5432
+          protocol: TCP
+        - port: 27017
+          protocol: TCP
+        - port: 6379
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

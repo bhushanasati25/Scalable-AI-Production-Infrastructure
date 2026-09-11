@@ -1,0 +1,76 @@
+# ============================================================
+# Scalable AI Production Infrastructure — .gitignore
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.whl
+.venv/
+venv/
+env/
+.uv/
+
+# --- Testing & Coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.mypy_cache/
+.ruff_cache/
+
+# --- Environment & Secrets ---
+.env
+.env.local
+.env.production
+.env.staging
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+
+# --- Docker ---
+docker/data/
+*.tar
+*.tar.gz
+
+# --- Kubernetes ---
+kubeconfig
+*.kubeconfig
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Database ---
+*.sql.bak
+*.dump
+
+# --- ML Models ---
+models/*.pt
+models/*.pth
+models/*.onnx
+models/*.bin
+models/*.safetensors
+!models/.gitkeep
+
+# --- Node (for Grafana dashboards, etc.) ---
+node_modules/

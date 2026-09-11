@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: scalable-ai
+
+resources:
+  - namespace.yaml
+  - api-service/deployment.yaml
+  - api-service/service.yaml
+  - api-service/hpa.yaml
+  - auth-service/deployment.yaml
+  - auth-service/service.yaml
+  - worker-service/deployment.yaml
+  - inference-service/deployment.yaml
+  - inference-service/service.yaml
+  - inference-service/hpa.yaml
+  - network-policy.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: scalable-ai-infra
+      app.kubernetes.io/managed-by: kustomize
+

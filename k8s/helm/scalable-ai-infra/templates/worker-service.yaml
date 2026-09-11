@@ -1,0 +1,70 @@
+{{- if .Values.workerService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.workerService.name }}
+  labels:
+    {{- include "scalable-ai.labels" . | nindent 4 }}
+    app: {{ .Values.workerService.name }}
+spec:
+  replicas: {{ .Values.workerService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.workerService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.workerService.name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: worker
+          image: {{ .Values.global.imageRegistry }}/{{ .Values.workerService.image.repository }}:{{ .Values.workerService.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment }}
+            - name: SERVICE_NAME
+              value: {{ .Values.workerService.name }}
+            {{- range $key, $value := .Values.workerService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: CELERY_BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.redis.brokerUrlKey }}
+            - name: CELERY_RESULT_BACKEND
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.redis.resultUrlKey }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.postgres.urlKey }}
+            - name: MONGO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.mongo.urlKey }}
+          resources:
+            {{- toYaml .Values.workerService.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - celery
+                - -A
+                - app.worker
+                - inspect
+                - ping
+                - --timeout
+                - "10"
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 15
+{{- end }}

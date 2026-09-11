@@ -1,0 +1,84 @@
+{{- if .Values.authService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.authService.name }}
+  labels:
+    {{- include "scalable-ai.labels" . | nindent 4 }}
+    app: {{ .Values.authService.name }}
+spec:
+  replicas: {{ .Values.authService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.authService.name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.authService.name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: {{ .Values.authService.name }}
+          image: {{ .Values.global.imageRegistry }}/{{ .Values.authService.image.repository }}:{{ .Values.authService.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.authService.port }}
+              name: http
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment }}
+            - name: SERVICE_NAME
+              value: {{ .Values.authService.name }}
+            {{- range $key, $value := .Values.authService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.postgres.urlKey }}
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.jwtSecretKey }}
+          resources:
+            {{- toYaml .Values.authService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.authService.name }}
+  labels:
+    {{- include "scalable-ai.labels" . | nindent 4 }}
+    app: {{ .Values.authService.name }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.authService.name }}
+  ports:
+    - name: http
+      port: {{ .Values.authService.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

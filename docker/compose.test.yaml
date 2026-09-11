@@ -1,0 +1,169 @@
+# ============================================================
+# Docker Compose — Test Environment
+# Ephemeral, isolated databases for CI/CD testing
+# Usage: docker compose -f docker/compose.test.yaml up --abort-on-container-exit
+# ============================================================
+
+services:
+  api-service-test:
+    build:
+      context: ../services/api-service
+      dockerfile: Dockerfile
+      target: testing
+      additional_contexts:
+        shared: ../shared
+    container_name: sai-api-test
+    environment:
+      - ENVIRONMENT=testing
+      - LOG_LEVEL=WARNING
+      - SERVICE_NAME=api-service-test
+      - DATABASE_URL=postgresql+asyncpg://test_user:test_password@postgres-test:5432/test_db
+      - MONGO_URL=mongodb://test_user:test_password@mongo-test:27017/test_db?authSource=test_db
+      - REDIS_URL=redis://redis-test:6379/0
+    command: ["pytest", "-v", "--tb=short", "--junitxml=/app/reports/junit.xml", "--cov=app", "--cov-report=xml:/app/reports/coverage.xml"]
+    volumes:
+      - test-reports:/app/reports
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      mongo-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - test-net
+
+  auth-service-test:
+    build:
+      context: ../services/auth-service
+      dockerfile: Dockerfile
+      target: testing
+      additional_contexts:
+        shared: ../shared
+    container_name: sai-auth-test
+    environment:
+      - ENVIRONMENT=testing
+      - LOG_LEVEL=WARNING
+      - SERVICE_NAME=auth-service-test
+      - DATABASE_URL=postgresql+asyncpg://test_user:test_password@postgres-test:5432/test_db
+      - REDIS_URL=redis://redis-test:6379/0
+      - JWT_SECRET_KEY=test-secret-key-for-testing-only-32chars
+    command: ["pytest", "-v", "--tb=short", "--junitxml=/app/reports/junit-auth.xml", "--cov=app", "--cov-report=xml:/app/reports/coverage-auth.xml"]
+    volumes:
+      - test-reports:/app/reports
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - test-net
+
+  worker-service-test:
+    build:
+      context: ../services/worker-service
+      dockerfile: Dockerfile
+      target: testing
+      additional_contexts:
+        shared: ../shared
+    container_name: sai-worker-test
+    environment:
+      - ENVIRONMENT=testing
+      - LOG_LEVEL=WARNING
+      - SERVICE_NAME=worker-service-test
+      - CELERY_BROKER_URL=redis://redis-test:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis-test:6379/2
+      - DATABASE_URL=postgresql+asyncpg://test_user:test_password@postgres-test:5432/test_db
+      - MONGO_URL=mongodb://test_user:test_password@mongo-test:27017/test_db?authSource=test_db
+    command: ["pytest", "-v", "--tb=short", "--junitxml=/app/reports/junit-worker.xml", "--cov=app", "--cov-report=xml:/app/reports/coverage-worker.xml"]
+    volumes:
+      - test-reports:/app/reports
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      mongo-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - test-net
+
+  inference-service-test:
+    build:
+      context: ../services/inference-service
+      dockerfile: Dockerfile
+      target: testing
+      additional_contexts:
+        shared: ../shared
+    container_name: sai-inference-test
+    environment:
+      - ENVIRONMENT=testing
+      - LOG_LEVEL=WARNING
+      - SERVICE_NAME=inference-service-test
+      - REDIS_URL=redis://redis-test:6379/0
+      - DEVICE=cpu
+    command: ["pytest", "-v", "--tb=short", "--junitxml=/app/reports/junit-inference.xml", "--cov=app", "--cov-report=xml:/app/reports/coverage-inference.xml"]
+    volumes:
+      - test-reports:/app/reports
+    depends_on:
+      redis-test:
+        condition: service_healthy
+    networks:
+      - test-net
+
+  # --- Ephemeral Test Databases ---
+  postgres-test:
+    image: postgres:17.5-alpine
+    container_name: sai-postgres-test
+    environment:
+      - POSTGRES_DB=test_db
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+    tmpfs:
+      - /var/lib/postgresql/data  # RAM-backed for speed
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mongo-test:
+    image: mongo:7.0
+    container_name: sai-mongo-test
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=test_user
+      - MONGO_INITDB_ROOT_PASSWORD=test_password
+      - MONGO_INITDB_DATABASE=test_db
+    tmpfs:
+      - /data/db  # RAM-backed for speed
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis-test:
+    image: redis:7.4-alpine
+    container_name: sai-redis-test
+    tmpfs:
+      - /data
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+networks:
+  test-net:
+    name: sai-test-net
+    driver: bridge
+
+volumes:
+  test-reports:
+    name: sai-test-reports

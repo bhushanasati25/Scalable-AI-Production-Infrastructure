@@ -1,0 +1,94 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: scalable-ai-dev
+
+resources:
+  - ../../base
+
+patches:
+  # API Service — single replica, debug logging
+  - target:
+      kind: Deployment
+      name: api-service
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: LOG_LEVEL
+          value: DEBUG
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 100m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 128Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 500m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 256Mi
+
+  # Auth Service — single replica
+  - target:
+      kind: Deployment
+      name: auth-service
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  # Worker Service — single replica, low concurrency
+  - target:
+      kind: Deployment
+      name: worker-service
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: CELERY_CONCURRENCY
+          value: "2"
+
+  # Inference Service — single replica
+  - target:
+      kind: Deployment
+      name: inference-service
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  # Disable HPA in dev
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: api-service-hpa
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 2
+
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: inference-service-hpa
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 2
+
+labels:
+  - pairs:
+      env: dev
+

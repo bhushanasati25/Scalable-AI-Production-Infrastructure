@@ -1,0 +1,159 @@
+# Default values for scalable-ai-infra
+# Override these per environment using --values or --set
+
+global:
+  namespace: scalable-ai
+  imageRegistry: ghcr.io/your-org
+  imagePullPolicy: IfNotPresent
+  environment: production
+
+# ── API Service ──
+apiService:
+  enabled: true
+  name: api-service
+  replicas: 2
+  image:
+    repository: api-service
+    tag: latest
+  port: 8000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPU: 70
+    targetMemory: 80
+  env:
+    LOG_LEVEL: INFO
+    API_WORKERS: "4"
+
+# ── Auth Service ──
+authService:
+  enabled: true
+  name: auth-service
+  replicas: 2
+  image:
+    repository: auth-service
+    tag: latest
+  port: 8001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  env:
+    LOG_LEVEL: INFO
+
+# ── Worker Service ──
+workerService:
+  enabled: true
+  name: worker-service
+  replicas: 2
+  image:
+    repository: worker-service
+    tag: latest
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+  env:
+    CELERY_CONCURRENCY: "4"
+
+# ── Inference Service ──
+inferenceService:
+  enabled: true
+  name: inference-service
+  replicas: 2
+  image:
+    repository: inference-service
+    tag: latest
+  port: 8002
+  resources:
+    requests:
+      cpu: "1"
+      memory: 1Gi
+    limits:
+      cpu: "4"
+      memory: 4Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPU: 60
+  env:
+    DEVICE: cpu
+    MAX_BATCH_SIZE: "32"
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+
+# ── Database Credentials ──
+database:
+  existingSecret: database-credentials
+  postgres:
+    urlKey: postgres-url
+  mongo:
+    urlKey: mongo-url
+  redis:
+    urlKey: redis-url
+    brokerUrlKey: redis-broker-url
+    resultUrlKey: redis-result-url
+
+# ── Auth Secrets ──
+auth:
+  existingSecret: auth-secrets
+  jwtSecretKey: jwt-secret
+
+# ── Ingress ──
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rate-limit: "10"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1s"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /api
+          service: api-service
+          port: 8000
+        - path: /auth
+          service: auth-service
+          port: 8001
+        - path: /inference
+          service: inference-service
+          port: 8002
+  tls:
+    - secretName: scalable-ai-tls
+      hosts:
+        - api.example.com
+
+# ── Monitoring ──
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+  prometheusRules:
+    enabled: true
+
+# ── Pod Disruption Budget ──
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ── Network Policies ──
+networkPolicies:
+  enabled: true

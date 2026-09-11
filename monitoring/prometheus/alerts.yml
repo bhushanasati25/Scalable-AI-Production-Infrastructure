@@ -1,0 +1,122 @@
+# Prometheus Alert Rules
+groups:
+  # ── Service Health ──
+  - name: service_health
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been unreachable for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.service }}"
+          description: "Error rate is above 5% for the last 5 minutes (current: {{ $value | humanizePercentage }})."
+
+      - alert: CriticalErrorRate
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service)
+          > 0.10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical error rate on {{ $labels.service }}"
+          description: "Error rate exceeds 10% (current: {{ $value | humanizePercentage }})."
+
+  # ── Latency ──
+  - name: latency
+    rules:
+      - alert: HighLatencyP99
+        expr: |
+          histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+          > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P99 latency on {{ $labels.service }}"
+          description: "P99 latency is {{ $value | humanizeDuration }} (threshold: 500ms)."
+
+      - alert: CriticalLatencyP99
+        expr: |
+          histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+          > 2.0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical P99 latency on {{ $labels.service }}"
+          description: "P99 latency is {{ $value | humanizeDuration }} (threshold: 2s)."
+
+  # ── Infrastructure ──
+  - name: infrastructure
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          process_cpu_seconds_total > 0.90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.job }}"
+
+      - alert: HighMemoryUsage
+        expr: |
+          process_resident_memory_bytes / 1024 / 1024 > 450
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.job }}"
+          description: "Memory usage is above 450MB."
+
+  # ── Database ──
+  - name: database
+    rules:
+      - alert: PostgresConnectionPoolExhausted
+        expr: |
+          pg_stat_activity_count > 180
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL connection pool near exhaustion"
+          description: "Active connections: {{ $value }} (limit: 200)."
+
+      - alert: PostgresReplicationLag
+        expr: |
+          pg_replication_lag > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL replication lag detected"
+          description: "Replication lag is {{ $value }}s."
+
+  # ── SLO: 99.9% Uptime ──
+  - name: slo
+    rules:
+      - alert: UptimeSLOBreach
+        expr: |
+          avg_over_time(up{job=~"api-service|auth-service|inference-service"}[30m]) < 0.999
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "99.9% uptime SLO at risk"
+          description: "Service {{ $labels.job }} availability is {{ $value | humanizePercentage }} over the last 30 minutes."

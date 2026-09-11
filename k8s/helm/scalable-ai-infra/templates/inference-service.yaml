@@ -1,0 +1,118 @@
+{{- if .Values.inferenceService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.inferenceService.name }}
+  labels:
+    {{- include "scalable-ai.labels" . | nindent 4 }}
+    app: {{ .Values.inferenceService.name }}
+spec:
+  replicas: {{ .Values.inferenceService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.inferenceService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.inferenceService.name }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: inference
+          image: {{ .Values.global.imageRegistry }}/{{ .Values.inferenceService.image.repository }}:{{ .Values.inferenceService.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.inferenceService.port }}
+              name: http
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment }}
+            - name: SERVICE_NAME
+              value: {{ .Values.inferenceService.name }}
+            {{- range $key, $value := .Values.inferenceService.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.redis.urlKey }}
+          resources:
+            {{- toYaml .Values.inferenceService.resources | nindent 12 }}
+          volumeMounts:
+            - name: model-storage
+              mountPath: /app/models
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.inferenceService.name }}-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.inferenceService.name }}
+  labels:
+    {{- include "scalable-ai.labels" . | nindent 4 }}
+    app: {{ .Values.inferenceService.name }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .Values.inferenceService.name }}
+  ports:
+    - name: http
+      port: {{ .Values.inferenceService.port }}
+      targetPort: http
+      protocol: TCP
+{{- if .Values.inferenceService.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.inferenceService.name }}-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.inferenceService.name }}
+  minReplicas: {{ .Values.inferenceService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.inferenceService.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.inferenceService.autoscaling.targetCPU }}
+{{- end }}
+{{- if .Values.inferenceService.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.inferenceService.name }}-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.inferenceService.persistence.size }}
+  {{- if .Values.inferenceService.persistence.storageClass }}
+  storageClassName: {{ .Values.inferenceService.persistence.storageClass }}
+  {{- end }}
+{{- end }}
+{{- end }}
