@@ -30,20 +30,12 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    email: Mapped[str] = mapped_column(
-        String(255), unique=True, nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="user"
-    )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
+    role: Mapped[str] = mapped_column(String(50), nullable=False, default="user")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -52,10 +44,10 @@ class User(Base):
     )
 
     # Relationships
-    tasks: Mapped[list["Task"]] = relationship(
+    tasks: Mapped[list[Task]] = relationship(
         "Task", back_populates="owner", cascade="all, delete-orphan"
     )
-    inference_jobs: Mapped[list["InferenceJob"]] = relationship(
+    inference_jobs: Mapped[list[InferenceJob]] = relationship(
         "InferenceJob", back_populates="owner", cascade="all, delete-orphan"
     )
 
@@ -68,14 +60,11 @@ class Task(Base):
 
     __tablename__ = "tasks"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     task_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     status: Mapped[str] = mapped_column(
-        Enum("pending", "processing", "completed", "failed", "cancelled",
-             name="task_status"),
+        Enum("pending", "processing", "completed", "failed", "cancelled", name="task_status"),
         nullable=False,
         default="pending",
         index=True,
@@ -84,9 +73,7 @@ class Task(Base):
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     result: Mapped[dict | None] = mapped_column(JSONB)
     error_message: Mapped[str | None] = mapped_column(Text)
-    celery_task_id: Mapped[str | None] = mapped_column(
-        String(255), unique=True, index=True
-    )
+    celery_task_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -104,7 +91,7 @@ class Task(Base):
     )
 
     # Relationships
-    owner: Mapped["User"] = relationship("User", back_populates="tasks")
+    owner: Mapped[User] = relationship("User", back_populates="tasks")
 
     __table_args__ = (
         Index("ix_tasks_status_priority", "status", "priority"),
@@ -120,18 +107,11 @@ class InferenceJob(Base):
 
     __tablename__ = "inference_jobs"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    request_id: Mapped[str] = mapped_column(
-        String(255), unique=True, nullable=False, index=True
-    )
-    model_name: Mapped[str] = mapped_column(
-        String(255), nullable=False, index=True
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     status: Mapped[str] = mapped_column(
-        Enum("pending", "processing", "completed", "failed",
-             name="inference_status"),
+        Enum("pending", "processing", "completed", "failed", name="inference_status"),
         nullable=False,
         default="pending",
         index=True,
@@ -153,11 +133,9 @@ class InferenceJob(Base):
     )
 
     # Relationships
-    owner: Mapped["User"] = relationship("User", back_populates="inference_jobs")
+    owner: Mapped[User] = relationship("User", back_populates="inference_jobs")
 
-    __table_args__ = (
-        Index("ix_inference_model_status", "model_name", "status"),
-    )
+    __table_args__ = (Index("ix_inference_model_status", "model_name", "status"),)
 
     def __repr__(self) -> str:
         return f"<InferenceJob {self.request_id} [{self.status}]>"
@@ -179,9 +157,7 @@ class AuditLog(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
 
-    __table_args__ = (
-        Index("ix_audit_actor_time", "actor_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_audit_actor_time", "actor_id", "created_at"),)
 
     def __repr__(self) -> str:
         return f"<AuditLog {self.action} by {self.actor_id}>"

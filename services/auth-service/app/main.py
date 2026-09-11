@@ -10,19 +10,18 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
 
-import structlog
 from fastapi import FastAPI, Depends, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
-    AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
 import sys
+
 sys.path.insert(0, "/app")
 from shared.common.schemas import (
     HealthResponse,
@@ -37,7 +36,6 @@ from shared.common.exceptions import (
     BaseServiceError,
     UnauthorizedError,
     ConflictError,
-    BadRequestError,
 )
 from shared.common.logging import configure_logging, get_logger
 
@@ -65,7 +63,9 @@ settings = AuthSettings()
 
 # ── Database ──
 connect_args = {"timeout": 2} if settings.environment == "testing" else {}
-engine = create_async_engine(settings.database_url, pool_size=10, pool_pre_ping=True, connect_args=connect_args)
+engine = create_async_engine(
+    settings.database_url, pool_size=10, pool_pre_ping=True, connect_args=connect_args
+)
 session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 
@@ -112,7 +112,9 @@ def verify_token(token: str) -> dict:
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _start_time
 
-    configure_logging(settings.service_name, settings.log_level, json_format=settings.environment != "development")
+    configure_logging(
+        settings.service_name, settings.log_level, json_format=settings.environment != "development"
+    )
     logger = get_logger(__name__)
     logger.info("Starting Auth Service", version=settings.version)
     _start_time = time.time()
@@ -122,11 +124,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         try:
             async with engine.begin() as conn:
                 from sqlalchemy import text
+
                 await conn.execute(text("SELECT 1"))
         except Exception as e:
             logger.warning("Database not available on startup", error=str(e))
     logger.info("Auth Service started")
-
 
     yield
 
@@ -163,7 +165,9 @@ async def health_check() -> HealthResponse:
 
 
 # ── Auth Endpoints ──
-@app.post("/auth/register", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED)
+@app.post(
+    "/auth/register", response_model=APIResponse[UserResponse], status_code=status.HTTP_201_CREATED
+)
 async def register(user_data: UserCreate) -> APIResponse[UserResponse]:
     """Register a new user."""
     logger = get_logger(__name__)

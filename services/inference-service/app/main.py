@@ -10,12 +10,13 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import sys
+
 sys.path.insert(0, "/app")
 from shared.common.schemas import (
     HealthResponse,
@@ -26,7 +27,7 @@ from shared.common.schemas import (
     InferenceResponse,
     TaskStatus,
 )
-from shared.common.exceptions import BaseServiceError, InferenceError, InferenceTimeoutError
+from shared.common.exceptions import BaseServiceError, InferenceError
 from shared.common.logging import configure_logging, get_logger
 
 
@@ -82,7 +83,6 @@ load_model("sentiment-analyzer-v2")
 
 
 def run_model_inference(model_name: str, input_data: dict, params: dict) -> dict:
-
     """
     Run inference on a loaded model.
     TODO: Replace with actual model inference.
@@ -114,7 +114,9 @@ def run_model_inference(model_name: str, input_data: dict, params: dict) -> dict
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _start_time
 
-    configure_logging(settings.service_name, settings.log_level, json_format=settings.environment != "development")
+    configure_logging(
+        settings.service_name, settings.log_level, json_format=settings.environment != "development"
+    )
     logger = get_logger(__name__)
     logger.info("Starting Inference Service", version=settings.version, device=settings.device)
     _start_time = time.time()
@@ -130,7 +132,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     logger.info("Inference Service stopping")
-
 
 
 # ── App ──
@@ -217,6 +218,7 @@ async def batch_predict(request: BatchRequest) -> APIResponse[BatchResponse]:
 
     if len(request.inputs) > settings.max_batch_size:
         from shared.common.exceptions import BadRequestError
+
         raise BadRequestError(
             f"Batch size {len(request.inputs)} exceeds maximum {settings.max_batch_size}"
         )

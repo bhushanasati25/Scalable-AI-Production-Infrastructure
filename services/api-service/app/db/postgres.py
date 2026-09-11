@@ -5,6 +5,7 @@ Production-grade connection pooling and session management.
 
 from __future__ import annotations
 
+import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -16,7 +17,6 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
-import sys
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -28,7 +28,9 @@ engine = create_async_engine(
     pool_size=settings.db_pool_size,
     max_overflow=settings.db_max_overflow,
     pool_recycle=settings.db_pool_recycle,
-    pool_timeout=1 if ("pytest" in sys.modules or settings.is_testing) else settings.db_pool_timeout,
+    pool_timeout=1
+    if ("pytest" in sys.modules or settings.is_testing)
+    else settings.db_pool_timeout,
     pool_pre_ping=True,  # Verify connections before use
     echo=settings.db_echo,
     connect_args=connect_args,
@@ -46,6 +48,7 @@ async_session_factory = async_sessionmaker(
 # ── Base Model ──
 class Base(DeclarativeBase):
     """Declarative base for all SQLAlchemy models."""
+
     pass
 
 

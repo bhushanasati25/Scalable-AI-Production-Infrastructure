@@ -13,6 +13,7 @@ from celery.signals import worker_init, worker_shutdown
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import sys
+
 sys.path.insert(0, "/app")
 from shared.common.logging import configure_logging, get_logger
 
@@ -31,7 +32,9 @@ class WorkerSettings(BaseSettings):
     celery_task_timeout: int = 300
 
     database_url: str = "postgresql+asyncpg://app_user:password@postgres:5432/scalable_ai"
-    mongo_url: str = "mongodb://app_user:password@mongo:27017/scalable_ai_docs?authSource=scalable_ai_docs"
+    mongo_url: str = (
+        "mongodb://app_user:password@mongo:27017/scalable_ai_docs?authSource=scalable_ai_docs"
+    )
 
 
 settings = WorkerSettings()
@@ -50,29 +53,24 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-
     # Reliability
     task_acks_late=True,  # Acknowledge after completion
     worker_prefetch_multiplier=1,  # Fair distribution
     task_reject_on_worker_lost=True,
     task_soft_time_limit=settings.celery_task_timeout - 30,
     task_time_limit=settings.celery_task_timeout,
-
     # Retry
     task_default_retry_delay=60,
     task_max_retries=3,
-
     # Queues
     task_default_queue="default",
     task_routes={
         "app.worker.tasks.run_inference": {"queue": "inference"},
         "app.worker.tasks.process_data_pipeline": {"queue": "data-pipeline"},
     },
-
     # Monitoring
     worker_send_task_events=True,
     task_send_sent_event=True,
-
     # Concurrency
     worker_concurrency=settings.celery_concurrency,
 )
@@ -81,7 +79,9 @@ celery_app.conf.update(
 # ── Signals ──
 @worker_init.connect
 def on_worker_init(**kwargs):
-    configure_logging(settings.service_name, settings.log_level, json_format=settings.environment != "development")
+    configure_logging(
+        settings.service_name, settings.log_level, json_format=settings.environment != "development"
+    )
     logger = get_logger(__name__)
     logger.info("Celery worker initialized", concurrency=settings.celery_concurrency)
 
@@ -95,6 +95,7 @@ def on_worker_shutdown(**kwargs):
 # ── Base Task with Retry ──
 class RetryTask(Task):
     """Base task class with automatic retry on failure."""
+
     autoretry_for = (Exception,)
     retry_kwargs = {"max_retries": 3}
     retry_backoff = True
@@ -104,7 +105,9 @@ class RetryTask(Task):
 
 # ── Tasks ──
 @celery_app.task(bind=True, base=RetryTask, name="app.worker.tasks.run_inference")
-def run_inference(self, request_id: str, model_name: str, input_data: dict, params: dict | None = None):
+def run_inference(
+    self, request_id: str, model_name: str, input_data: dict, params: dict | None = None
+):
     """
     Execute model inference as a background task.
     Updates both PostgreSQL (status) and MongoDB (logs).
@@ -118,6 +121,7 @@ def run_inference(self, request_id: str, model_name: str, input_data: dict, para
         # Simulate inference processing
         # TODO: Forward to inference-service via HTTP or gRPC
         import time as t
+
         t.sleep(2)  # Simulate model inference latency
 
         result = {

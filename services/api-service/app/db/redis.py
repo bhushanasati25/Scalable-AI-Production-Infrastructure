@@ -31,6 +31,7 @@ def get_redis() -> aioredis.Redis:
 
 # ── Lifecycle ──
 
+
 async def init_redis() -> None:
     """Initialize Redis connection and verify connectivity."""
     client = get_redis()

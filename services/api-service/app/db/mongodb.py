@@ -44,6 +44,7 @@ def get_mongo_db() -> AsyncIOMotorDatabase:
 
 # ── Collection Accessors ──
 
+
 def get_inference_logs_collection():
     """Get the inference_logs collection."""
     return get_mongo_db()["inference_logs"]
@@ -60,6 +61,7 @@ def get_system_metrics_collection():
 
 
 # ── Lifecycle ──
+
 
 async def init_mongo() -> None:
     """Initialize MongoDB connection and verify connectivity."""

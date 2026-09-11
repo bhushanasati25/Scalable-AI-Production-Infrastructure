@@ -39,7 +39,9 @@ class Settings(BaseSettings):
     db_echo: bool = False
 
     # ── MongoDB ──
-    mongo_url: str = "mongodb://app_user:password@mongo:27017/scalable_ai_docs?authSource=scalable_ai_docs"
+    mongo_url: str = (
+        "mongodb://app_user:password@mongo:27017/scalable_ai_docs?authSource=scalable_ai_docs"
+    )
     mongo_db: str = "scalable_ai_docs"
     mongo_max_pool_size: int = 50
     mongo_min_pool_size: int = 10

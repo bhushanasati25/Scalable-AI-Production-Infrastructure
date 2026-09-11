@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 async def client():
     """Create an async test client."""
     from app.main import app
+
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",

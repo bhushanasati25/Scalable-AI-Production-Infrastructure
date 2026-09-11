@@ -5,30 +5,30 @@ Production-grade with lifespan management, error handling, and middleware.
 
 from __future__ import annotations
 
+# Shared library imports
+import sys
 import time
 import uuid
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from pathlib import Path
 
-import structlog
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from prometheus_client import Counter, Histogram, generate_latest
 from starlette.responses import Response
 
-from app.core.config import get_settings
-from app.db.postgres import init_db, close_db, check_db_health
-from app.db.mongodb import init_mongo, close_mongo, check_mongo_health
-from app.db.redis import init_redis, close_redis, check_redis_health
 from app.api.v1 import router as v1_router
+from app.core.config import get_settings
+from app.db.mongodb import check_mongo_health, close_mongo, init_mongo
+from app.db.postgres import check_db_health, close_db, init_db
+from app.db.redis import check_redis_health, close_redis, init_redis
 
-# Shared library imports
-import sys
 sys.path.insert(0, "/app")
-from shared.common.logging import configure_logging, get_logger, set_correlation_id
-from shared.common.schemas import HealthResponse, ServiceName, ErrorResponse
 from shared.common.exceptions import BaseServiceError
+from shared.common.logging import configure_logging, get_logger, set_correlation_id
+from shared.common.schemas import ErrorResponse, HealthResponse, ServiceName
 
 settings = get_settings()
 
@@ -89,7 +89,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logger.error("Redis connection failed", error=str(e))
             raise
 
-    logger.info("API Service started successfully", startup_time_ms=round((time.time() - _start_time) * 1000))
+    logger.info(
+        "API Service started successfully",
+        startup_time_ms=round((time.time() - _start_time) * 1000),
+    )
 
     yield
 
@@ -100,7 +103,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await close_mongo()
         await close_redis()
     logger.info("API Service stopped")
-
 
 
 # ── App ──
@@ -193,9 +195,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
-from pathlib import Path
-from fastapi.responses import FileResponse, HTMLResponse
-
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
@@ -210,6 +209,7 @@ async def root_dashboard():
 
 
 # ── Health Endpoints ──
+
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check() -> HealthResponse:

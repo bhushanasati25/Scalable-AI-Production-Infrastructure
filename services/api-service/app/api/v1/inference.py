@@ -4,26 +4,25 @@ Inference API — Endpoints for model inference requests.
 
 from __future__ import annotations
 
-import time
+import sys
 import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.postgres import get_db_session
 from app.db.mongodb import get_inference_logs_collection
+from app.db.postgres import get_db_session
 from app.models.database import InferenceJob
 
-import sys
 sys.path.insert(0, "/app")
+from shared.common.logging import get_logger
 from shared.common.schemas import (
     APIResponse,
     InferenceRequest,
     InferenceResponse,
     TaskStatus,
 )
-from shared.common.logging import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -56,17 +55,19 @@ async def submit_inference(
 
     # Log to MongoDB for analytics
     inference_logs = get_inference_logs_collection()
-    await inference_logs.insert_one({
-        "request_id": request_id,
-        "model_name": request.model_name,
-        "status": "pending",
-        "input_data": request.input_data,
-        "parameters": request.parameters,
-        "created_at": datetime.utcnow(),
-        "metadata": {
-            "timeout": request.timeout,
-        },
-    })
+    await inference_logs.insert_one(
+        {
+            "request_id": request_id,
+            "model_name": request.model_name,
+            "status": "pending",
+            "input_data": request.input_data,
+            "parameters": request.parameters,
+            "created_at": datetime.utcnow(),
+            "metadata": {
+                "timeout": request.timeout,
+            },
+        }
+    )
 
     # TODO: dispatch to Celery worker for actual inference
     logger.info(
@@ -97,13 +98,12 @@ async def get_inference_status(
     """Check the status of an inference request."""
     from sqlalchemy import select
 
-    result = await db.execute(
-        select(InferenceJob).where(InferenceJob.request_id == request_id)
-    )
+    result = await db.execute(select(InferenceJob).where(InferenceJob.request_id == request_id))
     job = result.scalar_one_or_none()
 
     if not job:
         from shared.common.exceptions import NotFoundError
+
         raise NotFoundError("InferenceJob", request_id)
 
     return APIResponse(

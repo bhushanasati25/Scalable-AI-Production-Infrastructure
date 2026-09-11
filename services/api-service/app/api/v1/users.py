@@ -4,25 +4,25 @@ Users API — User management endpoints.
 
 from __future__ import annotations
 
+import sys
 import uuid
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.postgres import get_db_session
 from app.models.database import User
 
-import sys
 sys.path.insert(0, "/app")
+from shared.common.exceptions import ConflictError, NotFoundError
+from shared.common.logging import get_logger
 from shared.common.schemas import (
     APIResponse,
     PaginatedResponse,
     UserCreate,
     UserResponse,
 )
-from shared.common.exceptions import ConflictError, NotFoundError
-from shared.common.logging import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -39,9 +39,7 @@ async def create_user(
 ) -> APIResponse[UserResponse]:
     """Create a new user account."""
     # Check for existing email
-    existing = await db.execute(
-        select(User).where(User.email == user_data.email)
-    )
+    existing = await db.execute(select(User).where(User.email == user_data.email))
     if existing.scalar_one_or_none():
         raise ConflictError(f"User with email '{user_data.email}' already exists")
 

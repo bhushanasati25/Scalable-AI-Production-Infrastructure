@@ -4,28 +4,27 @@ Tasks API — CRUD endpoints for async task management.
 
 from __future__ import annotations
 
+import sys
 import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.postgres import get_db_session
 from app.models.database import Task
 
-import sys
 sys.path.insert(0, "/app")
+from shared.common.exceptions import NotFoundError
+from shared.common.logging import get_logger
 from shared.common.schemas import (
     APIResponse,
-    ErrorResponse,
     PaginatedResponse,
     TaskCreate,
     TaskResponse,
     TaskStatus,
 )
-from shared.common.exceptions import NotFoundError
-from shared.common.logging import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)

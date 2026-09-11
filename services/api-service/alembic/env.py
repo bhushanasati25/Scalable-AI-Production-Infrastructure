@@ -5,12 +5,12 @@ Alembic environment for async SQLAlchemy migrations.
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from alembic import context
 from app.db.postgres import Base
-from app.models.database import User, Task, InferenceJob, AuditLog  # noqa: F401 — register models
+from app.models.database import AuditLog, InferenceJob, Task, User  # noqa: F401 — register models
 
 config = context.config
 

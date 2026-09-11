@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.tasks import router as tasks_router
 from app.api.v1.inference import router as inference_router
+from app.api.v1.tasks import router as tasks_router
 from app.api.v1.users import router as users_router
 
 router = APIRouter()
