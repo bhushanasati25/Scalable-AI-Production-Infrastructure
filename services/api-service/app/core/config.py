@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     api_reload: bool = False
     version: str = "0.1.0"
 
+    @property
+    def is_testing(self) -> bool:
+        return self.environment == "testing"
+
     # ── PostgreSQL ──
     database_url: str = "postgresql+asyncpg://app_user:password@postgres:5432/scalable_ai"
     db_pool_size: int = 20

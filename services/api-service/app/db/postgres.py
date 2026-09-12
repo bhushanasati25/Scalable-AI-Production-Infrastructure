@@ -16,25 +16,31 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 
 settings = get_settings()
 
 # ── Engine ──
-connect_args = {"timeout": 1} if ("pytest" in sys.modules or settings.is_testing) else {}
-engine = create_async_engine(
-    settings.database_url,
-    pool_size=settings.db_pool_size,
-    max_overflow=settings.db_max_overflow,
-    pool_recycle=settings.db_pool_recycle,
-    pool_timeout=1
-    if ("pytest" in sys.modules or settings.is_testing)
-    else settings.db_pool_timeout,
-    pool_pre_ping=True,  # Verify connections before use
-    echo=settings.db_echo,
-    connect_args=connect_args,
-)
+is_test = "pytest" in sys.modules or settings.is_testing
+if is_test:
+    engine = create_async_engine(
+        settings.database_url,
+        poolclass=NullPool,
+        echo=settings.db_echo,
+        connect_args={"timeout": 2},
+    )
+else:
+    engine = create_async_engine(
+        settings.database_url,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_recycle=settings.db_pool_recycle,
+        pool_timeout=settings.db_pool_timeout,
+        pool_pre_ping=True,
+        echo=settings.db_echo,
+    )
 
 
 # ── Session Factory ──

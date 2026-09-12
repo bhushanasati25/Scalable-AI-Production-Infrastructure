@@ -27,6 +27,7 @@ class BaseServiceError(Exception):
 
 # ── Client Errors (4xx) ──
 
+
 class BadRequestError(BaseServiceError):
     def __init__(self, message: str = "Bad request", details: dict[str, Any] | None = None):
         super().__init__(message, status_code=400, error_code="BAD_REQUEST", details=details)
@@ -71,7 +72,9 @@ class RateLimitError(BaseServiceError):
 
 
 class ValidationError(BaseServiceError):
-    def __init__(self, message: str = "Validation error", errors: list[dict[str, Any]] | None = None):
+    def __init__(
+        self, message: str = "Validation error", errors: list[dict[str, Any]] | None = None
+    ):
         super().__init__(
             message,
             status_code=422,
@@ -81,6 +84,7 @@ class ValidationError(BaseServiceError):
 
 
 # ── Server Errors (5xx) ──
+
 
 class InternalError(BaseServiceError):
     def __init__(self, message: str = "Internal server error"):

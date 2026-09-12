@@ -6,14 +6,14 @@ Provides consistent request/response models and validation.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ── Enums ──
+
 
 class ServiceName(StrEnum):
     API = "api-service"
@@ -38,14 +38,17 @@ class InferenceDevice(StrEnum):
 
 # ── Base Models ──
 
+
 class TimestampMixin(BaseModel):
     """Mixin for created_at / updated_at timestamps."""
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None
 
 
 class BaseSchema(BaseModel):
     """Base schema with strict config for all models."""
+
     model_config = ConfigDict(
         from_attributes=True,
         str_strip_whitespace=True,
@@ -54,6 +57,7 @@ class BaseSchema(BaseModel):
 
 
 # ── Health Check ──
+
 
 class HealthResponse(BaseSchema):
     status: str = "healthy"
@@ -78,12 +82,13 @@ class PaginatedResponse(BaseSchema, Generic[T]):
 
 # ── API Response Wrapper ──
 
+
 class APIResponse(BaseSchema, Generic[T]):
     success: bool = True
     data: T | None = None
     message: str | None = None
     request_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ErrorResponse(BaseSchema):
@@ -91,10 +96,11 @@ class ErrorResponse(BaseSchema):
     error: str
     detail: str | None = None
     request_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 # ── User Models ──
+
 
 class UserBase(BaseSchema):
     email: str = Field(..., min_length=5, max_length=255)
@@ -112,6 +118,7 @@ class UserResponse(UserBase, TimestampMixin):
 
 
 # ── Task Models ──
+
 
 class TaskCreate(BaseSchema):
     name: str = Field(..., min_length=1, max_length=255)
@@ -134,6 +141,7 @@ class TaskResponse(BaseSchema, TimestampMixin):
 
 # ── Inference Models ──
 
+
 class InferenceRequest(BaseSchema):
     model_name: str = Field(..., min_length=1, max_length=255)
     input_data: dict[str, Any]
@@ -151,6 +159,7 @@ class InferenceResponse(BaseSchema):
 
 
 # ── Auth Models ──
+
 
 class TokenPayload(BaseSchema):
     sub: str  # User ID

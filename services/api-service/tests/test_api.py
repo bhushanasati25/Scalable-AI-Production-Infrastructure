@@ -5,33 +5,30 @@ API Service — Unit Tests
 from __future__ import annotations
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-async def client():
-    """Create an async test client."""
+def client():
+    """Create a test client."""
     from app.main import app
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
 
 
 class TestHealthEndpoints:
     """Test health check endpoints."""
 
-    async def test_health_returns_200(self, client: AsyncClient):
-        response = await client.get("/health")
+    def test_health_returns_200(self, client: TestClient):
+        response = client.get("/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
         assert data["service"] == "api-service"
 
-    async def test_health_includes_version(self, client: AsyncClient):
-        response = await client.get("/health")
+    def test_health_includes_version(self, client: TestClient):
+        response = client.get("/health")
         data = response.json()
         assert "version" in data
         assert "uptime_seconds" in data
@@ -40,8 +37,8 @@ class TestHealthEndpoints:
 class TestMetricsEndpoint:
     """Test Prometheus metrics endpoint."""
 
-    async def test_metrics_returns_200(self, client: AsyncClient):
-        response = await client.get("/metrics")
+    def test_metrics_returns_200(self, client: TestClient):
+        response = client.get("/metrics")
         assert response.status_code == 200
         assert "http_requests_total" in response.text or response.status_code == 200
 
@@ -49,8 +46,8 @@ class TestMetricsEndpoint:
 class TestTasksAPI:
     """Test tasks CRUD endpoints."""
 
-    async def test_create_task(self, client: AsyncClient):
-        response = await client.post(
+    def test_create_task(self, client: TestClient):
+        response = client.post(
             "/api/v1/tasks/",
             json={
                 "name": "Test Task",
@@ -59,23 +56,22 @@ class TestTasksAPI:
                 "priority": 5,
             },
         )
-        # May fail without DB, but validates route exists
         assert response.status_code in (201, 500, 503)
 
-    async def test_list_tasks(self, client: AsyncClient):
-        response = await client.get("/api/v1/tasks/")
+    def test_list_tasks(self, client: TestClient):
+        response = client.get("/api/v1/tasks/")
         assert response.status_code in (200, 500, 503)
 
 
 class TestInferenceAPI:
     """Test inference endpoints."""
 
-    async def test_list_models(self, client: AsyncClient):
-        response = await client.get("/api/v1/inference/models")
+    def test_list_models(self, client: TestClient):
+        response = client.get("/api/v1/inference/models")
         assert response.status_code in (200, 500)
 
-    async def test_submit_inference(self, client: AsyncClient):
-        response = await client.post(
+    def test_submit_inference(self, client: TestClient):
+        response = client.post(
             "/api/v1/inference/predict",
             json={
                 "model_name": "text-classifier-v1",
@@ -88,8 +84,8 @@ class TestInferenceAPI:
 class TestUsersAPI:
     """Test users endpoints."""
 
-    async def test_create_user(self, client: AsyncClient):
-        response = await client.post(
+    def test_create_user(self, client: TestClient):
+        response = client.post(
             "/api/v1/users/",
             json={
                 "email": "test@example.com",
@@ -99,6 +95,6 @@ class TestUsersAPI:
         )
         assert response.status_code in (201, 409, 500, 503)
 
-    async def test_list_users(self, client: AsyncClient):
-        response = await client.get("/api/v1/users/")
+    def test_list_users(self, client: TestClient):
+        response = client.get("/api/v1/users/")
         assert response.status_code in (200, 500, 503)

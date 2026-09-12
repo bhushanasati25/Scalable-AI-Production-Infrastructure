@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import sys
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,7 +62,7 @@ async def submit_inference(
             "status": "pending",
             "input_data": request.input_data,
             "parameters": request.parameters,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(UTC),
             "metadata": {
                 "timeout": request.timeout,
             },

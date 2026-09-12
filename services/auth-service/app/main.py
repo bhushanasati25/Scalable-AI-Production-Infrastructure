@@ -8,7 +8,7 @@ import sys
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, FastAPI, Request, status
@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 sys.path.insert(0, "/app")
 from shared.common.exceptions import (
@@ -61,10 +62,19 @@ class AuthSettings(BaseSettings):
 settings = AuthSettings()
 
 # ── Database ──
-connect_args = {"timeout": 2} if settings.environment == "testing" else {}
-engine = create_async_engine(
-    settings.database_url, pool_size=10, pool_pre_ping=True, connect_args=connect_args
-)
+is_test = settings.environment == "testing" or "pytest" in sys.modules
+if is_test:
+    engine = create_async_engine(
+        settings.database_url,
+        poolclass=NullPool,
+        connect_args={"timeout": 2},
+    )
+else:
+    engine = create_async_engine(
+        settings.database_url,
+        pool_size=10,
+        pool_pre_ping=True,
+    )
 session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 
@@ -132,7 +142,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     logger.info("Auth Service stopping")
-    await engine.dispose()
+    if not ("pytest" in sys.modules or settings.environment == "testing"):
+        with suppress(Exception):
+            await engine.dispose()
 
 
 # ── App ──

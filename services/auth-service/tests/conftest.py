@@ -9,6 +9,8 @@ os.environ.setdefault(
 )
 os.environ.setdefault("ENVIRONMENT", "testing")
 
+import contextlib
+
 import pytest
 
 
@@ -18,15 +20,31 @@ def anyio_backend():
 
 
 @pytest.fixture(autouse=True, scope="session")
-async def setup_test_db():
+def setup_test_db():
+    import asyncio
+
     from app.main import engine
     from app.models import Base
 
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        yield
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-    except Exception:
-        yield
+    async def _setup():
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        except Exception:
+            pass
+
+    async def _teardown():
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.drop_all)
+            await engine.dispose()
+        except Exception:
+            pass
+
+    with contextlib.suppress(Exception):
+        asyncio.run(_setup())
+
+    yield
+
+    with contextlib.suppress(Exception):
+        asyncio.run(_teardown())

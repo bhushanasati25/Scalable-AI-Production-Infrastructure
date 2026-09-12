@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import sys
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import func, select
@@ -165,5 +165,5 @@ async def cancel_task(
         return  # Already terminal
 
     task.status = "cancelled"
-    task.completed_at = datetime.utcnow()
+    task.completed_at = datetime.now(UTC)
     logger.info("Task cancelled", task_id=str(task_id))

@@ -31,9 +31,7 @@ def set_correlation_id(correlation_id: str) -> None:
     correlation_id_var.set(correlation_id)
 
 
-def add_correlation_id(
-    logger: Any, method_name: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def add_correlation_id(logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Structlog processor to inject correlation_id into every log entry."""
     event_dict["correlation_id"] = get_correlation_id()
     return event_dict
@@ -41,11 +39,11 @@ def add_correlation_id(
 
 def add_service_context(service_name: str):
     """Factory for a structlog processor that injects service name."""
-    def processor(
-        logger: Any, method_name: str, event_dict: dict[str, Any]
-    ) -> dict[str, Any]:
+
+    def processor(logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
         event_dict["service"] = service_name
         return event_dict
+
     return processor
 
 
