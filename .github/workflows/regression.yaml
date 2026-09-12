@@ -29,8 +29,9 @@ jobs:
       - name: Validate local healthcheck contracts & compose config
         if: steps.check-target.outputs.is_live == 'false'
         run: |
-          bash docker/scripts/healthcheck.sh --help || true
+          cp docker/.env.example docker/.env
           docker compose -f docker/compose.yaml config > /dev/null
+          docker compose -f docker/compose.test.yaml config > /dev/null
           echo "Local infrastructure definitions & healthcheck contracts: VALID ✓"
 
       - name: Health check — API Service
